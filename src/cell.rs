@@ -1,5 +1,7 @@
 use crate::card::Card;
+use crate::card::{CARD_HEIGHT, CARD_WIDTH};
 use crate::tileset::TileSet;
+use crate::Collision;
 use ggez::event::EventHandler;
 use ggez::{Context, GameResult};
 use nalgebra::Vector2;
@@ -19,6 +21,17 @@ impl Cell {
     ) -> Self {
         Self { pos, card, tileset }
     }
+
+    pub fn take(&mut self) -> Option<Card> {
+        self.card.take()
+    }
+    pub fn put(&mut self, card: Card) {
+        self.card = Some(card)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.card.is_none()
+    }
 }
 
 impl EventHandler<ggez::GameError> for Cell {
@@ -37,5 +50,14 @@ impl EventHandler<ggez::GameError> for Cell {
             )
             .unwrap();
         Ok(())
+    }
+}
+
+impl Collision for Cell {
+    fn inside(&self, pos: Vector2<i32>) -> bool {
+        pos[0] >= self.pos[0]
+            && pos[0] <= self.pos[0] + CARD_WIDTH
+            && pos[1] >= self.pos[1]
+            && pos[1] <= self.pos[1] + CARD_HEIGHT
     }
 }
