@@ -1,7 +1,5 @@
 use card::{Card, CARD_HEIGHT, CARD_WIDTH};
-use components::cell::Cell;
-use components::column::Column;
-use components::stack::Stack;
+use components::{Cascade, Cell, Foundation};
 use ggez::event::{self, EventHandler};
 use ggez::graphics::{self, Color};
 use ggez::input::mouse::MouseButton;
@@ -23,8 +21,8 @@ trait Collision {
 
 enum CardSource {
     Cell(usize),
-    Column(usize),
-    Stack(usize),
+    Cascade(usize),
+    Foundation(usize),
 }
 
 fn main() {
@@ -48,10 +46,10 @@ fn main() {
 
 struct Game {
     tileset: Arc<Mutex<tileset::TileSet<Option<Card>>>>,
-    columns: [Column; 8],
+    cascades: [Cascade; 8],
     open_cells: [Cell; 4],
-    stacks: [Stack; 4],
-    cursor_column: Column,
+    foundations: [Foundation; 4],
+    cursor_column: Cascade,
     cursor_card_source: Option<CardSource>,
 }
 
@@ -73,12 +71,12 @@ impl Game {
         tileset
     }
 
-    fn init_columns(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Column; 8] {
+    fn init_columns(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Cascade; 8] {
         let mut rng = rand::thread_rng();
         let mut deck = Card::deck();
         deck.shuffle(&mut rng);
 
-        let mut columns = vec![
+        let mut cascades = vec![
             Vec::new(),
             Vec::new(),
             Vec::new(),
@@ -90,11 +88,11 @@ impl Game {
         ];
         let mut selected_column = 0;
         while let Some(card) = deck.pop() {
-            columns[selected_column].push(card);
-            selected_column = (selected_column + 1) % columns.len();
+            cascades[selected_column].push(card);
+            selected_column = (selected_column + 1) % cascades.len();
         }
-        let mut it = columns.into_iter().enumerate().map(|(i, cards)| {
-            Column::new(
+        let mut it = cascades.into_iter().enumerate().map(|(i, cards)| {
+            Cascade::new(
                 vector![
                     MARGIN_LENGTH + (i as i32 * (CARD_WIDTH + MARGIN_LENGTH)),
                     MARGIN_LENGTH + CARD_HEIGHT + MARGIN_LENGTH
@@ -115,8 +113,8 @@ impl Game {
             it.next().unwrap(),
         ]
     }
-    fn init_cursor_column(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> Column {
-        Column::new(vector![0, 0], vec![], tileset.clone(), true)
+    fn init_cursor_column(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> Cascade {
+        Cascade::new(vector![0, 0], vec![], tileset.clone(), true)
     }
     fn init_open_cells(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Cell; 4] {
         [
@@ -154,9 +152,9 @@ impl Game {
             ),
         ]
     }
-    fn init_stacks(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Stack; 4] {
+    fn init_foundations(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Foundation; 4] {
         [
-            Stack::new(
+            Foundation::new(
                 vector![
                     MARGIN_LENGTH + (0 * (CARD_WIDTH + MARGIN_LENGTH)),
                     MARGIN_LENGTH
@@ -164,7 +162,7 @@ impl Game {
                 vec![],
                 tileset.clone(),
             ),
-            Stack::new(
+            Foundation::new(
                 vector![
                     MARGIN_LENGTH + (1 * (CARD_WIDTH + MARGIN_LENGTH)),
                     MARGIN_LENGTH
@@ -172,7 +170,7 @@ impl Game {
                 vec![],
                 tileset.clone(),
             ),
-            Stack::new(
+            Foundation::new(
                 vector![
                     MARGIN_LENGTH + (2 * (CARD_WIDTH + MARGIN_LENGTH)),
                     MARGIN_LENGTH
@@ -180,7 +178,7 @@ impl Game {
                 vec![],
                 tileset.clone(),
             ),
-            Stack::new(
+            Foundation::new(
                 vector![
                     MARGIN_LENGTH + (3 * (CARD_WIDTH + MARGIN_LENGTH)),
                     MARGIN_LENGTH
@@ -193,15 +191,15 @@ impl Game {
 
     pub fn new(ctx: &mut Context) -> Self {
         let tileset = Arc::new(Mutex::new(Self::init_tileset(ctx)));
-        let columns = Self::init_columns(tileset.clone());
+        let cascades = Self::init_columns(tileset.clone());
         let open_cells = Self::init_open_cells(tileset.clone());
-        let stacks = Self::init_stacks(tileset.clone());
+        let foundations = Self::init_foundations(tileset.clone());
         let cursor_column = Self::init_cursor_column(tileset.clone());
         Self {
-            columns,
+            cascades,
             tileset,
             open_cells,
-            stacks,
+            foundations,
             cursor_column,
             cursor_card_source: None,
         }
@@ -213,7 +211,7 @@ impl EventHandler<ggez::GameError> for Game {
         if button == MouseButton::Left {
             let pos = vector![x as i32, y as i32];
             if !self.cursor_column.is_empty() {
-                for c in self.columns.iter_mut() {
+                for c in self.cascades.iter_mut() {
                     if c.inside(pos) && c.can_stack(self.cursor_column.top_card().unwrap()) {
                         c.put(self.cursor_column.take_all());
                         return;
@@ -226,12 +224,12 @@ impl EventHandler<ggez::GameError> for Game {
                         return;
                     }
                 }
-                for s in self.stacks.iter_mut() {
-                    if s.inside(pos)
+                for f in self.foundations.iter_mut() {
+                    if f.inside(pos)
                         && self.cursor_column.is_single_card()
-                        && s.can_stack(self.cursor_column.top_card().unwrap())
+                        && f.can_stack(self.cursor_column.top_card().unwrap())
                     {
-                        s.put(self.cursor_column.take(1).pop().unwrap());
+                        f.put(self.cursor_column.take(1).pop().unwrap());
                         return;
                     }
                 }
@@ -240,11 +238,11 @@ impl EventHandler<ggez::GameError> for Game {
                     Some(CardSource::Cell(n)) => {
                         self.open_cells[n].put(self.cursor_column.take(1).pop().unwrap());
                     }
-                    Some(CardSource::Column(n)) => {
-                        self.columns[n].put(self.cursor_column.take_all());
+                    Some(CardSource::Cascade(n)) => {
+                        self.cascades[n].put(self.cursor_column.take_all());
                     }
-                    Some(CardSource::Stack(n)) => {
-                        self.stacks[n].put(self.cursor_column.take(1).pop().unwrap());
+                    Some(CardSource::Foundation(n)) => {
+                        self.foundations[n].put(self.cursor_column.take(1).pop().unwrap());
                     }
                     None => {
                         panic!("No card source");
@@ -259,12 +257,12 @@ impl EventHandler<ggez::GameError> for Game {
         match button {
             MouseButton::Right => {
                 let pos = vector![x as i32, y as i32];
-                for c in self.columns.iter_mut() {
+                for c in self.cascades.iter_mut() {
                     if c.inside(pos) && c.cards_to_take(pos) == 1 {
                         if let Some(card_to_stack) = c.bottom_card() {
-                            for s in self.stacks.iter_mut() {
-                                if s.can_stack(card_to_stack) {
-                                    s.put(c.take(1).pop().unwrap());
+                            for f in self.foundations.iter_mut() {
+                                if f.can_stack(card_to_stack) {
+                                    f.put(c.take(1).pop().unwrap());
                                     self.cursor_card_source = None;
                                     return;
                                 }
@@ -275,9 +273,9 @@ impl EventHandler<ggez::GameError> for Game {
                 for c in self.open_cells.iter_mut() {
                     if c.inside(pos) {
                         if let Some(card_to_stack) = c.card() {
-                            for s in self.stacks.iter_mut() {
-                                if s.can_stack(card_to_stack) {
-                                    s.put(c.take().unwrap());
+                            for f in self.foundations.iter_mut() {
+                                if f.can_stack(card_to_stack) {
+                                    f.put(c.take().unwrap());
                                     self.cursor_card_source = None;
                                     return;
                                 }
@@ -289,12 +287,12 @@ impl EventHandler<ggez::GameError> for Game {
             MouseButton::Left => {
                 let pos = vector![x as i32, y as i32];
                 if self.cursor_column.is_empty() {
-                    for (i, c) in self.columns.iter_mut().enumerate() {
+                    for (i, c) in self.cascades.iter_mut().enumerate() {
                         if c.inside(pos) {
                             let cards_to_take = c.cards_to_take(pos);
                             if c.has_alternating_color_cards(cards_to_take) {
                                 self.cursor_column.put(c.take(cards_to_take));
-                                self.cursor_card_source = Some(CardSource::Column(i));
+                                self.cursor_card_source = Some(CardSource::Cascade(i));
                             }
                         }
                     }
@@ -306,11 +304,11 @@ impl EventHandler<ggez::GameError> for Game {
                             }
                         }
                     }
-                    for (i, s) in self.stacks.iter_mut().enumerate() {
-                        if s.inside(pos) {
-                            if let Some(card) = s.take() {
+                    for (i, f) in self.foundations.iter_mut().enumerate() {
+                        if f.inside(pos) {
+                            if let Some(card) = f.take() {
                                 self.cursor_column.put(vec![card]);
-                                self.cursor_card_source = Some(CardSource::Stack(i));
+                                self.cursor_card_source = Some(CardSource::Foundation(i));
                             }
                         }
                     }
@@ -329,13 +327,13 @@ impl EventHandler<ggez::GameError> for Game {
         graphics::clear(ctx, Color::from_rgb(19, 147, 40));
         self.tileset.lock().unwrap().clear_queue();
 
-        for c in self.stacks.iter_mut() {
-            c.draw(ctx)?;
+        for f in self.foundations.iter_mut() {
+            f.draw(ctx)?;
         }
         for c in self.open_cells.iter_mut() {
             c.draw(ctx)?;
         }
-        for c in self.columns.iter_mut() {
+        for c in self.cascades.iter_mut() {
             c.draw(ctx)?;
         }
         self.cursor_column.draw(ctx)?;

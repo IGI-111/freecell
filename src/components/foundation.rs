@@ -7,13 +7,13 @@ use ggez::{Context, GameResult};
 use nalgebra::Vector2;
 use std::sync::{Arc, Mutex};
 
-pub struct Stack {
+pub struct Foundation {
     pos: Vector2<i32>,
     cards: Vec<Card>,
     tileset: Arc<Mutex<TileSet<Option<Card>>>>,
 }
 
-impl Stack {
+impl Foundation {
     pub fn new(
         pos: Vector2<i32>,
         cards: Vec<Card>,
@@ -46,7 +46,7 @@ impl Stack {
     }
 }
 
-impl EventHandler<ggez::GameError> for Stack {
+impl EventHandler<ggez::GameError> for Foundation {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
         // Update code here...
         Ok(())
@@ -73,7 +73,7 @@ impl EventHandler<ggez::GameError> for Stack {
     }
 }
 
-impl Collision for Stack {
+impl Collision for Foundation {
     fn inside(&self, pos: Vector2<i32>) -> bool {
         pos[0] >= self.pos[0]
             && pos[0] <= self.pos[0] + CARD_WIDTH

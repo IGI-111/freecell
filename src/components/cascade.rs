@@ -10,14 +10,14 @@ use std::sync::{Arc, Mutex};
 
 const CARD_STACK_INCREMENT: i32 = CARD_HEIGHT / 4;
 
-pub struct Column {
+pub struct Cascade {
     pos: Vector2<i32>,
     cards: Vec<Card>,
     tileset: Arc<Mutex<TileSet<Option<Card>>>>,
     follow_cursor: bool,
 }
 
-impl Column {
+impl Cascade {
     pub fn new(
         pos: Vector2<i32>,
         cards: Vec<Card>,
@@ -98,7 +98,7 @@ impl Column {
     }
 }
 
-impl EventHandler<ggez::GameError> for Column {
+impl EventHandler<ggez::GameError> for Cascade {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         if self.follow_cursor {
             let cursor_pos = input::mouse::position(ctx);
@@ -133,7 +133,7 @@ impl EventHandler<ggez::GameError> for Column {
     }
 }
 
-impl Collision for Column {
+impl Collision for Cascade {
     fn inside(&self, pos: Vector2<i32>) -> bool {
         let height = if self.cards.is_empty() {
             CARD_HEIGHT
