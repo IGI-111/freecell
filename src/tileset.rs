@@ -1,6 +1,7 @@
 use ggez::graphics::{self, spritebatch::SpriteBatch, Color, DrawParam, Image, Rect};
 use nalgebra::{point, vector, Point2, Vector2};
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
+use std::hash::Hash;
 
 /// A set of tiles made from a tilesheet image.
 pub struct TileSet<Key: Hash + Eq> {
@@ -12,7 +13,7 @@ pub struct TileSet<Key: Hash + Eq> {
 
 impl<Key: Hash + Eq> TileSet<Key> {
     /// Create a new `TileSet` from an image and tile size.
-    pub fn new<S: Into<Vector2<i32>>>(sheet: Image, tile_size: S) -> Self {
+    pub fn new(sheet: Image, tile_size: impl Into<Vector2<i32>>) -> Self {
         let tile_size = tile_size.into();
         let sheet_dimensions = vector![
             sheet.width() as i32 / tile_size.x,
@@ -29,10 +30,10 @@ impl<Key: Hash + Eq> TileSet<Key> {
 
     /// Register a tile from the tilesheet to the `TileSet` with the lookup
     /// value of `key`.
-    pub fn register_tile<I: Into<Point2<i32>>>(
+    pub fn register_tile(
         &mut self,
         key: Key,
-        index: I,
+        index: impl Into<Point2<i32>>,
     ) -> Result<(), TileSetError> {
         let index = index.into();
 
@@ -47,11 +48,11 @@ impl<Key: Hash + Eq> TileSet<Key> {
 
     /// Queue a tile with the lookup value `key` to be drawn at `draw_location`,
     /// with extra drawing options.
-    pub fn queue_tile<P: Into<Point2<i32>>, TP: Into<TileParams>>(
+    pub fn queue_tile(
         &mut self,
         key: Key,
-        draw_location: P,
-        options: Option<TP>,
+        draw_location: impl Into<Point2<i32>>,
+        options: Option<impl Into<TileParams>>,
     ) -> Result<(), TileSetError> {
         let tile = self
             .tile_cache

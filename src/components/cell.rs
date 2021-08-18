@@ -1,7 +1,6 @@
-use crate::card::Card;
-use crate::card::{CARD_HEIGHT, CARD_WIDTH};
-use crate::tileset::TileSet;
-use crate::Collision;
+use crate::card::{Card, CARD_HEIGHT, CARD_WIDTH};
+use crate::game::Collision;
+use crate::tileset::{TileParams, TileSet};
 use ggez::event::EventHandler;
 use ggez::{Context, GameResult};
 use nalgebra::Vector2;
@@ -45,11 +44,7 @@ impl EventHandler<ggez::GameError> for Cell {
         self.tileset
             .lock()
             .unwrap()
-            .queue_tile(
-                self.card.clone(),
-                self.pos,
-                None::<crate::tileset::TileParams>,
-            )
+            .queue_tile(self.card.clone(), self.pos, None::<TileParams>)
             .unwrap();
         Ok(())
     }

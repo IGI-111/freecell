@@ -1,7 +1,6 @@
-use crate::card::Card;
-use crate::card::{CARD_HEIGHT, CARD_WIDTH};
-use crate::tileset::TileSet;
-use crate::Collision;
+use crate::card::{Card, CARD_HEIGHT, CARD_WIDTH};
+use crate::game::Collision;
+use crate::tileset::{TileParams, TileSet};
 use ggez::event::EventHandler;
 use ggez::{Context, GameResult};
 use nalgebra::Vector2;
@@ -56,7 +55,7 @@ impl EventHandler<ggez::GameError> for Foundation {
             self.tileset
                 .lock()
                 .unwrap()
-                .queue_tile(None, self.pos, None::<crate::tileset::TileParams>)
+                .queue_tile(None, self.pos, None::<TileParams>)
                 .unwrap();
         } else {
             self.tileset
@@ -65,7 +64,7 @@ impl EventHandler<ggez::GameError> for Foundation {
                 .queue_tile(
                     Some(self.cards.last().unwrap().clone()),
                     self.pos,
-                    None::<crate::tileset::TileParams>,
+                    None::<TileParams>,
                 )
                 .unwrap();
         }

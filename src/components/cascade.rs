@@ -1,7 +1,6 @@
-use crate::card::Card;
-use crate::card::{CARD_HEIGHT, CARD_WIDTH};
-use crate::tileset::TileSet;
-use crate::Collision;
+use crate::card::{Card, CARD_HEIGHT, CARD_WIDTH};
+use crate::game::Collision;
+use crate::tileset::{TileParams, TileSet};
 use ggez::event::EventHandler;
 use ggez::input;
 use ggez::{Context, GameResult};
@@ -114,7 +113,7 @@ impl EventHandler<ggez::GameError> for Cascade {
             self.tileset
                 .lock()
                 .unwrap()
-                .queue_tile(None, self.pos, None::<crate::tileset::TileParams>)
+                .queue_tile(None, self.pos, None::<TileParams>)
                 .unwrap();
         } else {
             for (y, card) in self.cards.iter().cloned().enumerate() {
@@ -124,7 +123,7 @@ impl EventHandler<ggez::GameError> for Cascade {
                     .queue_tile(
                         Some(card),
                         point![0, (y as i32 * CARD_STACK_INCREMENT)] + self.pos,
-                        None::<crate::tileset::TileParams>,
+                        None::<TileParams>,
                     )
                     .unwrap();
             }
