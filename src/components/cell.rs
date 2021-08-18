@@ -28,6 +28,9 @@ impl Cell {
     pub fn put(&mut self, card: Card) {
         self.card = Some(card)
     }
+    pub fn is_empty(&self) -> bool {
+        self.card.is_none()
+    }
 }
 
 impl EventHandler<ggez::GameError> for Cell {

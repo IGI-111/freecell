@@ -4,7 +4,7 @@ use components::column::Column;
 use components::stack::Stack;
 use ggez::event::{self, EventHandler};
 use ggez::graphics::{self, Color};
-use ggez::input::{self, mouse::MouseButton};
+use ggez::input::mouse::MouseButton;
 use ggez::{Context, ContextBuilder, GameResult};
 use nalgebra::{point, vector, Vector2};
 use rand::prelude::*;
@@ -17,6 +17,12 @@ mod tileset;
 
 trait Collision {
     fn inside(&self, pos: Vector2<i32>) -> bool;
+}
+
+enum CardSource {
+    Cell(usize),
+    Column(usize),
+    Stack(usize),
 }
 
 fn main() {
@@ -43,7 +49,7 @@ struct Game {
     open_cells: [Cell; 4],
     stacks: [Stack; 4],
     cursor_column: Column,
-    previous_click_state: bool,
+    cursor_card_source: Option<CardSource>,
 }
 
 impl Game {
@@ -167,59 +173,113 @@ impl Game {
             open_cells,
             stacks,
             cursor_column,
-            previous_click_state: false,
+            cursor_card_source: None,
         }
     }
 }
 
 impl EventHandler<ggez::GameError> for Game {
-    fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        self.cursor_column.update(ctx)?;
-
-        let click_state = input::mouse::button_pressed(ctx, MouseButton::Left);
-        if self.previous_click_state && !click_state {
-            let pos = input::mouse::position(ctx);
-            let pos = vector![pos.x as i32, pos.y as i32];
-            if self.cursor_column.is_empty() {
+    fn mouse_button_up_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32) {
+        if button == MouseButton::Left {
+            let pos = vector![x as i32, y as i32];
+            if !self.cursor_column.is_empty() {
                 for c in self.columns.iter_mut() {
                     if c.inside(pos) {
-                        self.cursor_column.put(c.take(c.cards_to_take(pos)));
+                        match (c.bottom_card(), self.cursor_column.top_card().unwrap()) {
+                            (Some(column_bottom_card), cursor_top_card) => {
+                                if column_bottom_card.follows_alternating(cursor_top_card) {
+                                    c.put(self.cursor_column.take_all());
+                                    return;
+                                }
+                            }
+
+                            (None, _cursor_bottom_card) => {
+                                c.put(self.cursor_column.take_all());
+                                return;
+                            }
+                        }
                     }
                 }
+
                 for c in self.open_cells.iter_mut() {
+                    if c.inside(pos) && self.cursor_column.is_single_card() && c.is_empty() {
+                        c.put(self.cursor_column.take(1).pop().unwrap());
+                        return;
+                    }
+                }
+                for s in self.stacks.iter_mut() {
+                    if s.inside(pos) && self.cursor_column.is_single_card() {
+                        match (s.top_card(), self.cursor_column.top_card().unwrap()) {
+                            (Some(stack_top_card), cursor_top_card) => {
+                                if cursor_top_card.follows(stack_top_card) {
+                                    s.put(self.cursor_column.take(1).pop().unwrap());
+                                    return;
+                                }
+                            }
+                            (None, cursor_top_card) => {
+                                if cursor_top_card.is_ace() {
+                                    s.put(self.cursor_column.take(1).pop().unwrap());
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                // return cards back if they're not put anywhere
+                match self.cursor_card_source {
+                    Some(CardSource::Cell(n)) => {
+                        self.open_cells[n].put(self.cursor_column.take(1).pop().unwrap());
+                    }
+                    Some(CardSource::Column(n)) => {
+                        self.columns[n].put(self.cursor_column.take_all());
+                    }
+                    Some(CardSource::Stack(n)) => {
+                        self.stacks[n].put(self.cursor_column.take(1).pop().unwrap());
+                    }
+                    None => {
+                        panic!("No card source");
+                    }
+                }
+                self.cursor_card_source = None;
+            }
+        }
+    }
+
+    fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32) {
+        if button == MouseButton::Left {
+            let pos = vector![x as i32, y as i32];
+            if self.cursor_column.is_empty() {
+                for (i, c) in self.columns.iter_mut().enumerate() {
+                    if c.inside(pos) {
+                        let cards_to_take = c.cards_to_take(pos);
+                        if c.has_alternating_color_cards(cards_to_take) {
+                            self.cursor_column.put(c.take(cards_to_take));
+                            self.cursor_card_source = Some(CardSource::Column(i));
+                        }
+                    }
+                }
+                for (i, c) in self.open_cells.iter_mut().enumerate() {
                     if c.inside(pos) {
                         if let Some(card) = c.take() {
                             self.cursor_column.put(vec![card]);
+                            self.cursor_card_source = Some(CardSource::Cell(i));
                         }
                     }
                 }
-                for s in self.stacks.iter_mut() {
+                for (i, s) in self.stacks.iter_mut().enumerate() {
                     if s.inside(pos) {
                         if let Some(card) = s.take() {
                             self.cursor_column.put(vec![card]);
+                            self.cursor_card_source = Some(CardSource::Stack(i));
                         }
-                    }
-                }
-            } else {
-                for c in self.columns.iter_mut() {
-                    if c.inside(pos) {
-                        c.put(self.cursor_column.take_all());
-                    }
-                }
-
-                for c in self.open_cells.iter_mut() {
-                    if c.inside(pos) {
-                        c.put(self.cursor_column.take(1).pop().unwrap());
-                    }
-                }
-                for s in self.stacks.iter_mut() {
-                    if s.inside(pos) {
-                        s.put(self.cursor_column.take(1).pop().unwrap());
                     }
                 }
             }
         }
-        self.previous_click_state = click_state;
+    }
+
+    fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
+        self.cursor_column.update(ctx)?;
         Ok(())
     }
 

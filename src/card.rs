@@ -8,6 +8,19 @@ pub struct Card {
 }
 
 impl Card {
+    pub fn is_ace(&self) -> bool {
+        self.value == 0
+    }
+    pub fn is_red(&self) -> bool {
+        self.suit % 2 == 0
+    }
+    pub fn follows(&self, previous: &Card) -> bool {
+        previous.suit == self.suit && previous.value + 1 == self.value
+    }
+    pub fn follows_alternating(&self, previous: &Card) -> bool {
+        previous.is_red() != self.is_red() && previous.value + 1 == self.value
+    }
+
     pub fn deck() -> Vec<Card> {
         let mut d = Vec::new();
         for suit in 0..4 {

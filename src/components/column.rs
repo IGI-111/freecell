@@ -52,6 +52,10 @@ impl Column {
         self.cards.is_empty()
     }
 
+    pub fn is_single_card(&self) -> bool {
+        self.cards.len() == 1
+    }
+
     pub fn cards_to_take(&self, pos: Vector2<i32>) -> usize {
         if !self.inside(pos) {
             0
@@ -63,6 +67,27 @@ impl Column {
             }
             1
         }
+    }
+    pub fn has_alternating_color_cards(&self, n: usize) -> bool {
+        let mut it = (self.cards[(self.cards.len() - n)..(self.cards.len())]).iter();
+        let mut prev_card = if let Some(first_card) = it.next() {
+            first_card
+        } else {
+            return true;
+        };
+        while let Some(current_card) = it.next() {
+            if !(prev_card.follows_alternating(current_card)) {
+                return false;
+            }
+            prev_card = current_card;
+        }
+        true
+    }
+    pub fn top_card(&self) -> Option<&Card> {
+        self.cards.first()
+    }
+    pub fn bottom_card(&self) -> Option<&Card> {
+        self.cards.last()
     }
 }
 
