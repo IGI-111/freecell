@@ -40,6 +40,7 @@ fn main() {
         .add_resource_path(resource_dir)
         .build()
         .unwrap();
+    graphics::set_window_title(&mut ctx, "Freecell");
     let my_game = Game::new(&mut ctx);
 
     event::run(ctx, event_loop, my_game);
@@ -256,7 +257,35 @@ impl EventHandler<ggez::GameError> for Game {
 
     fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32) {
         match button {
-            MouseButton::Right => {}
+            MouseButton::Right => {
+                let pos = vector![x as i32, y as i32];
+                for c in self.columns.iter_mut() {
+                    if c.inside(pos) && c.cards_to_take(pos) == 1 {
+                        if let Some(card_to_stack) = c.bottom_card() {
+                            for s in self.stacks.iter_mut() {
+                                if s.can_stack(card_to_stack) {
+                                    s.put(c.take(1).pop().unwrap());
+                                    self.cursor_card_source = None;
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                for c in self.open_cells.iter_mut() {
+                    if c.inside(pos) {
+                        if let Some(card_to_stack) = c.card() {
+                            for s in self.stacks.iter_mut() {
+                                if s.can_stack(card_to_stack) {
+                                    s.put(c.take().unwrap());
+                                    self.cursor_card_source = None;
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             MouseButton::Left => {
                 let pos = vector![x as i32, y as i32];
                 if self.cursor_column.is_empty() {

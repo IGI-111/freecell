@@ -25,6 +25,9 @@ impl Cell {
     pub fn take(&mut self) -> Option<Card> {
         self.card.take()
     }
+    pub fn card(&self) -> Option<&Card> {
+        self.card.as_ref()
+    }
     pub fn put(&mut self, card: Card) {
         self.card = Some(card)
     }
