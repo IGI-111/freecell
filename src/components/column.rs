@@ -39,12 +39,30 @@ impl Column {
             self.cards.split_off(self.cards.len() - n)
         }
     }
+    pub fn take_all(&mut self) -> Vec<Card> {
+        let mut v = Vec::new();
+        std::mem::swap(&mut v, &mut self.cards);
+        v
+    }
     pub fn put(&mut self, mut cards: Vec<Card>) {
         self.cards.append(&mut cards);
     }
 
     pub fn is_empty(&self) -> bool {
         self.cards.is_empty()
+    }
+
+    pub fn cards_to_take(&self, pos: Vector2<i32>) -> usize {
+        if !self.inside(pos) {
+            0
+        } else {
+            for i in 0..(self.cards.len()) {
+                if pos[1] <= (self.pos[1] + ((1 + i as i32) * CARD_STACK_INCREMENT)) {
+                    return self.cards.len() - i as usize;
+                }
+            }
+            1
+        }
     }
 }
 

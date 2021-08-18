@@ -7,53 +7,64 @@ use ggez::{Context, GameResult};
 use nalgebra::Vector2;
 use std::sync::{Arc, Mutex};
 
-pub struct Cell {
+pub struct Stack {
     pos: Vector2<i32>,
-    card: Option<Card>,
+    cards: Vec<Card>,
     tileset: Arc<Mutex<TileSet<Option<Card>>>>,
 }
 
-impl Cell {
+impl Stack {
     pub fn new(
         pos: Vector2<i32>,
-        card: Option<Card>,
+        cards: Vec<Card>,
         tileset: Arc<Mutex<TileSet<Option<Card>>>>,
     ) -> Self {
-        Self { pos, card, tileset }
+        Self {
+            pos,
+            cards,
+            tileset,
+        }
     }
 
     pub fn take(&mut self) -> Option<Card> {
-        self.card.take()
+        self.cards.pop()
     }
     pub fn put(&mut self, card: Card) {
-        self.card = Some(card)
+        self.cards.push(card);
     }
-
     pub fn is_empty(&self) -> bool {
-        self.card.is_none()
+        self.cards.is_empty()
     }
 }
 
-impl EventHandler<ggez::GameError> for Cell {
+impl EventHandler<ggez::GameError> for Stack {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
         // Update code here...
         Ok(())
     }
     fn draw(&mut self, _ctx: &mut Context) -> GameResult<()> {
-        self.tileset
-            .lock()
-            .unwrap()
-            .queue_tile(
-                self.card.clone(),
-                self.pos,
-                None::<crate::tileset::TileParams>,
-            )
-            .unwrap();
+        if self.is_empty() {
+            self.tileset
+                .lock()
+                .unwrap()
+                .queue_tile(None, self.pos, None::<crate::tileset::TileParams>)
+                .unwrap();
+        } else {
+            self.tileset
+                .lock()
+                .unwrap()
+                .queue_tile(
+                    Some(self.cards.last().unwrap().clone()),
+                    self.pos,
+                    None::<crate::tileset::TileParams>,
+                )
+                .unwrap();
+        }
         Ok(())
     }
 }
 
-impl Collision for Cell {
+impl Collision for Stack {
     fn inside(&self, pos: Vector2<i32>) -> bool {
         pos[0] >= self.pos[0]
             && pos[0] <= self.pos[0] + CARD_WIDTH
