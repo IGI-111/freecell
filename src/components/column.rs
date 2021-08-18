@@ -89,6 +89,13 @@ impl Column {
     pub fn bottom_card(&self) -> Option<&Card> {
         self.cards.last()
     }
+
+    pub fn can_stack(&self, card: &Card) -> bool {
+        match self.bottom_card() {
+            Some(column_bottom_card) => column_bottom_card.follows_alternating(card),
+            None => true,
+        }
+    }
 }
 
 impl EventHandler<ggez::GameError> for Column {

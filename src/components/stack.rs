@@ -38,6 +38,12 @@ impl Stack {
     pub fn top_card(&self) -> Option<&Card> {
         self.cards.last()
     }
+    pub fn can_stack(&self, card: &Card) -> bool {
+        match self.top_card() {
+            Some(stack_top_card) => card.follows(stack_top_card),
+            None => card.is_ace(),
+        }
+    }
 }
 
 impl EventHandler<ggez::GameError> for Stack {
