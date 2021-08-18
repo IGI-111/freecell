@@ -1,12 +1,14 @@
 use crate::card::{Card, CARD_HEIGHT, CARD_WIDTH};
 use crate::components::{Cascade, Cell, Foundation};
-use crate::tileset::TileSet;
+use crate::tileset::{TileParams, TileSet};
 use ggez::event::EventHandler;
 use ggez::graphics::{self, Color};
 use ggez::input::mouse::MouseButton;
+use ggez::timer::check_update_time;
 use ggez::{Context, GameResult};
 use nalgebra::{point, vector, Vector2};
 use rand::prelude::*;
+use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
 const MARGIN_LENGTH: i32 = 20;
@@ -28,6 +30,7 @@ pub struct Game {
     foundations: [Foundation; 4],
     cursor_column: Cascade,
     cursor_card_source: Option<CardSource>,
+    finale_card_positions: VecDeque<(Card, Vector2<i32>)>,
 }
 
 impl Game {
@@ -48,7 +51,7 @@ impl Game {
         tileset
     }
 
-    fn init_columns(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Cascade; 8] {
+    fn init_cascades(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Cascade; 8] {
         let mut rng = rand::thread_rng();
         let mut deck = Card::deck();
         deck.shuffle(&mut rng);
@@ -166,9 +169,13 @@ impl Game {
         ]
     }
 
+    fn is_victory(&self) -> bool {
+        self.foundations.iter().all(|f| f.is_full())
+    }
+
     pub fn new(ctx: &mut Context) -> Self {
         let tileset = Arc::new(Mutex::new(Self::init_tileset(ctx)));
-        let cascades = Self::init_columns(tileset.clone());
+        let cascades = Self::init_cascades(tileset.clone());
         let open_cells = Self::init_open_cells(tileset.clone());
         let foundations = Self::init_foundations(tileset.clone());
         let cursor_column = Self::init_cursor_column(tileset.clone());
@@ -179,12 +186,16 @@ impl Game {
             foundations,
             cursor_column,
             cursor_card_source: None,
+            finale_card_positions: VecDeque::new(),
         }
     }
 }
 
 impl EventHandler<ggez::GameError> for Game {
     fn mouse_button_up_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32) {
+        if self.is_victory() {
+            return;
+        }
         if button == MouseButton::Left {
             let pos = vector![x as i32, y as i32];
             if !self.cursor_column.is_empty() {
@@ -231,6 +242,9 @@ impl EventHandler<ggez::GameError> for Game {
     }
 
     fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32) {
+        if self.is_victory() {
+            return;
+        }
         match button {
             MouseButton::Right => {
                 let pos = vector![x as i32, y as i32];
@@ -297,13 +311,24 @@ impl EventHandler<ggez::GameError> for Game {
 
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         self.cursor_column.update(ctx)?;
+
+        if self.is_victory() && check_update_time(ctx, 35) {
+            let mut rng = rand::thread_rng();
+            if self.finale_card_positions.len() >= 300 {
+                self.finale_card_positions.pop_front();
+            }
+            self.finale_card_positions.push_back((
+                Card::deck().into_iter().choose(&mut rng).unwrap(),
+                vector![rng.gen_range(-10..810), rng.gen_range(-10..610)],
+            ));
+        }
+        std::thread::yield_now();
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, Color::from_rgb(19, 147, 40));
         self.tileset.lock().unwrap().clear_queue();
-
         for f in self.foundations.iter_mut() {
             f.draw(ctx)?;
         }
@@ -314,7 +339,20 @@ impl EventHandler<ggez::GameError> for Game {
             c.draw(ctx)?;
         }
         self.cursor_column.draw(ctx)?;
+
+        if self.is_victory() {
+            for (card, pos) in self.finale_card_positions.iter() {
+                self.tileset
+                    .lock()
+                    .unwrap()
+                    .queue_tile(Some(card.clone()), pos.clone(), None::<TileParams>)
+                    .unwrap();
+            }
+        }
+
         self.tileset.lock().unwrap().draw(ctx)?;
-        graphics::present(ctx)
+        graphics::present(ctx)?;
+        std::thread::yield_now();
+        Ok(())
     }
 }

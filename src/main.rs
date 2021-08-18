@@ -27,7 +27,6 @@ fn main() {
         .build()
         .unwrap();
     graphics::set_window_title(&mut ctx, "Freecell");
-    let my_game = Game::new(&mut ctx);
-
-    event::run(ctx, event_loop, my_game);
+    let game = Game::new(&mut ctx);
+    event::run(ctx, event_loop, game);
 }

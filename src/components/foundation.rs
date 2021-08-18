@@ -34,6 +34,11 @@ impl Foundation {
     pub fn is_empty(&self) -> bool {
         self.cards.is_empty()
     }
+
+    pub fn is_full(&self) -> bool {
+        self.cards.len() >= 13
+    }
+
     pub fn top_card(&self) -> Option<&Card> {
         self.cards.last()
     }
