@@ -74,7 +74,7 @@ impl Game {
         let mut it = cascades.into_iter().enumerate().map(|(i, cards)| {
             Cascade::new(
                 vector![
-                    MARGIN_LENGTH + (i as i32 * (CARD_WIDTH + MARGIN_LENGTH)),
+                    2 * MARGIN_LENGTH + (i as i32 * (CARD_WIDTH + MARGIN_LENGTH)),
                     MARGIN_LENGTH + CARD_HEIGHT + MARGIN_LENGTH
                 ],
                 cards,
@@ -100,7 +100,7 @@ impl Game {
         [
             Cell::new(
                 vector![
-                    MARGIN_LENGTH + (4 * (CARD_WIDTH + MARGIN_LENGTH)),
+                    3 * MARGIN_LENGTH + (4 * (CARD_WIDTH + MARGIN_LENGTH)),
                     MARGIN_LENGTH
                 ],
                 None,
@@ -108,7 +108,7 @@ impl Game {
             ),
             Cell::new(
                 vector![
-                    MARGIN_LENGTH + (5 * (CARD_WIDTH + MARGIN_LENGTH)),
+                    3 * MARGIN_LENGTH + (5 * (CARD_WIDTH + MARGIN_LENGTH)),
                     MARGIN_LENGTH
                 ],
                 None,
@@ -116,7 +116,7 @@ impl Game {
             ),
             Cell::new(
                 vector![
-                    MARGIN_LENGTH + (6 * (CARD_WIDTH + MARGIN_LENGTH)),
+                    3 * MARGIN_LENGTH + (6 * (CARD_WIDTH + MARGIN_LENGTH)),
                     MARGIN_LENGTH
                 ],
                 None,
@@ -124,7 +124,7 @@ impl Game {
             ),
             Cell::new(
                 vector![
-                    MARGIN_LENGTH + (7 * (CARD_WIDTH + MARGIN_LENGTH)),
+                    3 * MARGIN_LENGTH + (7 * (CARD_WIDTH + MARGIN_LENGTH)),
                     MARGIN_LENGTH
                 ],
                 None,
