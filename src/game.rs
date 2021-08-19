@@ -1,8 +1,8 @@
-use crate::audio::{play_deal, play_drop, play_take};
+use crate::audio::Audio;
 use crate::card::{Card, CARD_HEIGHT, CARD_WIDTH};
 use crate::components::{Cascade, Cell, Foundation};
 use crate::tileset::{TileParams, TileSet};
-use ggez::audio::{SoundSource, Source};
+use ggez::audio::SoundSource;
 use ggez::event::EventHandler;
 use ggez::graphics::{self, Color};
 use ggez::input::mouse::MouseButton;
@@ -33,7 +33,7 @@ pub struct Game {
     cursor_column: Cascade,
     cursor_card_source: Option<CardSource>,
     finale_card_positions: VecDeque<(Card, Vector2<i32>)>,
-    shuffle_audio: Source,
+    audio: Audio,
 }
 
 impl Game {
@@ -183,10 +183,6 @@ impl Game {
         let foundations = Self::init_foundations(tileset.clone());
         let cursor_column = Self::init_cursor_column(tileset.clone());
 
-        let mut shuffle_audio = Source::new(ctx, "/take.wav").unwrap();
-        shuffle_audio.set_repeat(true);
-        shuffle_audio.set_pitch(4.);
-        shuffle_audio.set_volume(0.6);
         Self {
             cascades,
             tileset,
@@ -195,7 +191,7 @@ impl Game {
             cursor_column,
             cursor_card_source: None,
             finale_card_positions: VecDeque::new(),
-            shuffle_audio,
+            audio: Audio::new(ctx),
         }
     }
 }
@@ -211,7 +207,7 @@ impl EventHandler<ggez::GameError> for Game {
                 for c in self.cascades.iter_mut() {
                     if c.inside(pos) && c.can_stack(self.cursor_column.top_card().unwrap()) {
                         c.put(self.cursor_column.take_all());
-                        play_drop(ctx);
+                        self.audio.play_drop(ctx);
                         return;
                     }
                 }
@@ -219,7 +215,7 @@ impl EventHandler<ggez::GameError> for Game {
                 for c in self.open_cells.iter_mut() {
                     if c.inside(pos) && self.cursor_column.is_single_card() && c.is_empty() {
                         c.put(self.cursor_column.take(1).pop().unwrap());
-                        play_drop(ctx);
+                        self.audio.play_drop(ctx);
                         return;
                     }
                 }
@@ -229,7 +225,7 @@ impl EventHandler<ggez::GameError> for Game {
                         && f.can_stack(self.cursor_column.top_card().unwrap())
                     {
                         f.put(self.cursor_column.take(1).pop().unwrap());
-                        play_drop(ctx);
+                        self.audio.play_drop(ctx);
                         return;
                     }
                 }
@@ -249,7 +245,7 @@ impl EventHandler<ggez::GameError> for Game {
                     }
                 }
                 self.cursor_card_source = None;
-                play_drop(ctx);
+                self.audio.play_drop(ctx);
             }
         }
     }
@@ -268,7 +264,7 @@ impl EventHandler<ggez::GameError> for Game {
                                 if f.can_stack(card_to_stack) {
                                     f.put(c.take(1).pop().unwrap());
                                     self.cursor_card_source = None;
-                                    play_deal(ctx);
+                                    self.audio.play_deal(ctx);
                                     return;
                                 }
                             }
@@ -282,7 +278,7 @@ impl EventHandler<ggez::GameError> for Game {
                                 if f.can_stack(card_to_stack) {
                                     f.put(c.take().unwrap());
                                     self.cursor_card_source = None;
-                                    play_deal(ctx);
+                                    self.audio.play_deal(ctx);
                                     return;
                                 }
                             }
@@ -299,7 +295,7 @@ impl EventHandler<ggez::GameError> for Game {
                             if c.has_alternating_color_cards(cards_to_take) {
                                 self.cursor_column.put(c.take(cards_to_take));
                                 self.cursor_card_source = Some(CardSource::Cascade(i));
-                                play_take(ctx);
+                                self.audio.play_take(ctx);
                                 return;
                             }
                         }
@@ -309,7 +305,7 @@ impl EventHandler<ggez::GameError> for Game {
                             if let Some(card) = c.take() {
                                 self.cursor_column.put(vec![card]);
                                 self.cursor_card_source = Some(CardSource::Cell(i));
-                                play_take(ctx);
+                                self.audio.play_take(ctx);
                                 return;
                             }
                         }
@@ -319,7 +315,7 @@ impl EventHandler<ggez::GameError> for Game {
                             if let Some(card) = f.take() {
                                 self.cursor_column.put(vec![card]);
                                 self.cursor_card_source = Some(CardSource::Foundation(i));
-                                play_take(ctx);
+                                self.audio.play_take(ctx);
                                 return;
                             }
                         }
@@ -342,11 +338,13 @@ impl EventHandler<ggez::GameError> for Game {
                 Card::deck().into_iter().choose(&mut rng).unwrap(),
                 vector![rng.gen_range(-10..810), rng.gen_range(-10..610)],
             ));
-            if !self.shuffle_audio.playing() {
-                self.shuffle_audio.play(ctx)?;
+
+            if !self.audio.shuffle.playing() {
+                self.audio.shuffle.play(ctx)?;
             } else {
-                self.shuffle_audio
-                    .set_volume(self.shuffle_audio.volume() * 0.99);
+                self.audio
+                    .shuffle
+                    .set_volume(self.audio.shuffle.volume() * 0.99);
             }
         }
         std::thread::yield_now();
