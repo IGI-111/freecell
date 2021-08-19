@@ -13,8 +13,10 @@ impl Audio {
         deal.set_volume(0.1);
         let mut drop = Source::new(ctx, "/drop.wav").unwrap();
         drop.set_volume(0.1);
+        drop.set_pitch(1.7);
         let mut take = Source::new(ctx, "/take.wav").unwrap();
         take.set_volume(0.1);
+        take.set_pitch(1.7);
         Self { deal, drop, take }
     }
 }
