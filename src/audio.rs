@@ -1,22 +1,20 @@
 use ggez::audio::{SoundSource, Source};
 use ggez::Context;
 
-pub struct Audio {
-    pub deal: Source,
-    pub drop: Source,
-    pub take: Source,
+pub fn play_deal(ctx: &mut Context) {
+    let mut source = Source::new(ctx, "/deal.wav").unwrap();
+    source.set_volume(0.1);
+    source.play_detached(ctx).unwrap();
 }
-
-impl Audio {
-    pub fn new(ctx: &mut Context) -> Self {
-        let mut deal = Source::new(ctx, "/deal.wav").unwrap();
-        deal.set_volume(0.1);
-        let mut drop = Source::new(ctx, "/drop.wav").unwrap();
-        drop.set_volume(0.1);
-        drop.set_pitch(1.7);
-        let mut take = Source::new(ctx, "/take.wav").unwrap();
-        take.set_volume(0.1);
-        take.set_pitch(1.7);
-        Self { deal, drop, take }
-    }
+pub fn play_drop(ctx: &mut Context) {
+    let mut source = Source::new(ctx, "/drop.wav").unwrap();
+    source.set_volume(0.1);
+    source.set_pitch(1.7);
+    source.play_detached(ctx).unwrap();
+}
+pub fn play_take(ctx: &mut Context) {
+    let mut source = Source::new(ctx, "/take.wav").unwrap();
+    source.set_volume(0.1);
+    source.set_pitch(1.7);
+    source.play_detached(ctx).unwrap();
 }
