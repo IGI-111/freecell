@@ -4,6 +4,7 @@ use ggez::graphics;
 use ggez::ContextBuilder;
 use nalgebra::Vector2;
 
+mod audio;
 mod card;
 mod components;
 mod game;
