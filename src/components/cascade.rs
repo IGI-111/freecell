@@ -103,7 +103,7 @@ impl EventHandler<ggez::GameError> for Cascade {
             let cursor_pos = input::mouse::position(ctx);
             self.pos = vector![
                 cursor_pos.x as i32 - CARD_WIDTH / 2,
-                cursor_pos.y as i32 - CARD_HEIGHT / 2
+                cursor_pos.y as i32 - CARD_HEIGHT / 3
             ];
         }
         Ok(())
