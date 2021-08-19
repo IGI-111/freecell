@@ -1,6 +1,7 @@
 # Freecell
 
 Yet another implementation of the legendary total information solitaire.
+Play patience like it's 1991.
 
 ![game.gif](https://github.com/IGI-111/freecell/blob/master/game.gif?raw=true)
 
