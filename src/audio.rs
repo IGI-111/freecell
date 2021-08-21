@@ -5,7 +5,6 @@ pub struct Audio {
     deal: SoundData,
     drop: SoundData,
     take: SoundData,
-    pub shuffle: Source,
 }
 
 impl Audio {
@@ -13,17 +12,8 @@ impl Audio {
         let deal = SoundData::new(ctx, "/deal.wav").unwrap();
         let drop = SoundData::new(ctx, "/drop.wav").unwrap();
         let take = SoundData::new(ctx, "/take.wav").unwrap();
-        let mut shuffle = Source::from_data(ctx, take.clone()).unwrap();
-        shuffle.set_repeat(true);
-        shuffle.set_pitch(4.);
-        shuffle.set_volume(0.6);
 
-        Self {
-            deal,
-            drop,
-            take,
-            shuffle,
-        }
+        Self { deal, drop, take }
     }
     pub fn play_deal(&self, ctx: &mut Context) {
         let mut source = Source::from_data(ctx, self.deal.clone()).unwrap();
