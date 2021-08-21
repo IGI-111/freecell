@@ -35,7 +35,7 @@ pub struct Game {
 
 impl Game {
     fn is_victory(&self) -> bool {
-        self.foundations.iter().all(|f| f.is_full())
+        self.cascades.iter().all(|c| c.has_all_alternating())
     }
 
     pub fn new(ctx: &mut Context) -> Self {
