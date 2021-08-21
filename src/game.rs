@@ -1,7 +1,7 @@
-use crate::audio::Audio;
 use crate::card::{Card, CARD_HEIGHT, CARD_WIDTH};
-use crate::components::{Cascade, Cell, Finale, Foundation};
+use crate::components::{Cascade, Cell, Finale, Foundation, Hand};
 use crate::tileset::TileSet;
+use ggez::audio::{SoundData, SoundSource, Source};
 use ggez::event::EventHandler;
 use ggez::graphics::{self, Color};
 use ggez::input::mouse::MouseButton;
@@ -27,10 +27,10 @@ pub struct Game {
     cascades: [Cascade; 8],
     open_cells: [Cell; 4],
     foundations: [Foundation; 4],
-    cursor_column: Cascade,
+    hand: Hand,
     cursor_card_source: Option<CardSource>,
-    audio: Audio,
     finale: Finale,
+    deal_audio: SoundData,
 }
 
 impl Game {
@@ -79,7 +79,6 @@ impl Game {
                 ],
                 cards,
                 tileset.clone(),
-                false,
             )
         });
         [
@@ -92,9 +91,6 @@ impl Game {
             it.next().unwrap(),
             it.next().unwrap(),
         ]
-    }
-    fn init_cursor_column(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> Cascade {
-        Cascade::new(vector![0, 0], vec![], tileset, true)
     }
     fn init_open_cells(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Cell; 4] {
         [
@@ -172,18 +168,25 @@ impl Game {
         let cascades = Self::init_cascades(tileset.clone());
         let open_cells = Self::init_open_cells(tileset.clone());
         let foundations = Self::init_foundations(tileset.clone());
-        let cursor_column = Self::init_cursor_column(tileset.clone());
+        let hand = Hand::new(ctx, tileset.clone());
+        let deal_audio = SoundData::new(ctx, "/deal.wav").unwrap();
 
         Self {
             cascades,
             open_cells,
             foundations,
-            cursor_column,
+            hand,
             cursor_card_source: None,
-            audio: Audio::new(ctx),
             finale: Finale::new(ctx, tileset.clone()),
             tileset,
+            deal_audio,
         }
+    }
+
+    fn play_deal(&self, ctx: &mut Context) {
+        let mut source = Source::from_data(ctx, self.deal_audio.clone()).unwrap();
+        source.set_volume(0.1);
+        source.play_detached(ctx).unwrap();
     }
 }
 
@@ -194,49 +197,45 @@ impl EventHandler<ggez::GameError> for Game {
         }
         if button == MouseButton::Left {
             let pos = vector![x as i32, y as i32];
-            if !self.cursor_column.is_empty() {
+            if !self.hand.is_empty() {
                 for c in self.cascades.iter_mut() {
-                    if c.inside(pos) && c.can_stack(self.cursor_column.top_card().unwrap()) {
-                        c.put(self.cursor_column.take_all());
-                        self.audio.play_drop(ctx);
+                    if c.inside(pos) && c.can_stack(self.hand.top_card().unwrap()) {
+                        c.put(self.hand.take(ctx));
                         return;
                     }
                 }
 
                 for c in self.open_cells.iter_mut() {
-                    if c.inside(pos) && self.cursor_column.is_single_card() && c.is_empty() {
-                        c.put(self.cursor_column.take(1).pop().unwrap());
-                        self.audio.play_drop(ctx);
+                    if c.inside(pos) && self.hand.is_single_card() && c.is_empty() {
+                        c.put(self.hand.take(ctx).pop().unwrap());
                         return;
                     }
                 }
                 for f in self.foundations.iter_mut() {
                     if f.inside(pos)
-                        && self.cursor_column.is_single_card()
-                        && f.can_stack(self.cursor_column.top_card().unwrap())
+                        && self.hand.is_single_card()
+                        && f.can_stack(self.hand.top_card().unwrap())
                     {
-                        f.put(self.cursor_column.take(1).pop().unwrap());
-                        self.audio.play_drop(ctx);
+                        f.put(self.hand.take(ctx).pop().unwrap());
                         return;
                     }
                 }
                 // return cards back if they're not put anywhere
                 match self.cursor_card_source {
                     Some(CardSource::Cell(n)) => {
-                        self.open_cells[n].put(self.cursor_column.take(1).pop().unwrap());
+                        self.open_cells[n].put(self.hand.take(ctx).pop().unwrap());
                     }
                     Some(CardSource::Cascade(n)) => {
-                        self.cascades[n].put(self.cursor_column.take_all());
+                        self.cascades[n].put(self.hand.take(ctx));
                     }
                     Some(CardSource::Foundation(n)) => {
-                        self.foundations[n].put(self.cursor_column.take(1).pop().unwrap());
+                        self.foundations[n].put(self.hand.take(ctx).pop().unwrap());
                     }
                     None => {
                         panic!("No card source");
                     }
                 }
                 self.cursor_card_source = None;
-                self.audio.play_drop(ctx);
             }
         }
     }
@@ -255,7 +254,7 @@ impl EventHandler<ggez::GameError> for Game {
                                 if f.can_stack(card_to_stack) {
                                     f.put(c.take(1).pop().unwrap());
                                     self.cursor_card_source = None;
-                                    self.audio.play_deal(ctx);
+                                    self.play_deal(ctx);
                                     return;
                                 }
                             }
@@ -269,7 +268,7 @@ impl EventHandler<ggez::GameError> for Game {
                                 if f.can_stack(card_to_stack) {
                                     f.put(c.take().unwrap());
                                     self.cursor_card_source = None;
-                                    self.audio.play_deal(ctx);
+                                    self.play_deal(ctx);
                                     return;
                                 }
                             }
@@ -279,14 +278,13 @@ impl EventHandler<ggez::GameError> for Game {
             }
             MouseButton::Left => {
                 let pos = vector![x as i32, y as i32];
-                if self.cursor_column.is_empty() {
+                if self.hand.is_empty() {
                     for (i, c) in self.cascades.iter_mut().enumerate() {
                         if c.inside(pos) {
                             let cards_to_take = c.cards_to_take(pos);
                             if c.has_alternating_color_cards(cards_to_take) {
-                                self.cursor_column.put(c.take(cards_to_take));
+                                self.hand.put(ctx, c.take(cards_to_take));
                                 self.cursor_card_source = Some(CardSource::Cascade(i));
-                                self.audio.play_take(ctx);
                                 return;
                             }
                         }
@@ -294,9 +292,8 @@ impl EventHandler<ggez::GameError> for Game {
                     for (i, c) in self.open_cells.iter_mut().enumerate() {
                         if c.inside(pos) {
                             if let Some(card) = c.take() {
-                                self.cursor_column.put(vec![card]);
+                                self.hand.put(ctx, vec![card]);
                                 self.cursor_card_source = Some(CardSource::Cell(i));
-                                self.audio.play_take(ctx);
                                 return;
                             }
                         }
@@ -304,9 +301,8 @@ impl EventHandler<ggez::GameError> for Game {
                     for (i, f) in self.foundations.iter_mut().enumerate() {
                         if f.inside(pos) {
                             if let Some(card) = f.take() {
-                                self.cursor_column.put(vec![card]);
+                                self.hand.put(ctx, vec![card]);
                                 self.cursor_card_source = Some(CardSource::Foundation(i));
-                                self.audio.play_take(ctx);
                                 return;
                             }
                         }
@@ -318,7 +314,7 @@ impl EventHandler<ggez::GameError> for Game {
     }
 
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        self.cursor_column.update(ctx)?;
+        self.hand.update(ctx)?;
 
         if self.is_victory() {
             self.finale.update(ctx)?;
@@ -339,7 +335,7 @@ impl EventHandler<ggez::GameError> for Game {
         for c in self.cascades.iter_mut() {
             c.draw(ctx)?;
         }
-        self.cursor_column.draw(ctx)?;
+        self.hand.draw(ctx)?;
 
         if self.is_victory() {
             self.finale.draw(ctx)?;

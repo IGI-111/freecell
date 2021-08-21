@@ -1,19 +1,16 @@
+use super::CARD_STACK_INCREMENT;
 use crate::card::{Card, CARD_HEIGHT, CARD_WIDTH};
 use crate::game::Collision;
 use crate::tileset::{TileParams, TileSet};
 use ggez::event::EventHandler;
-use ggez::input;
 use ggez::{Context, GameResult};
-use nalgebra::{point, vector, Vector2};
+use nalgebra::{point, Vector2};
 use std::sync::{Arc, Mutex};
-
-const CARD_STACK_INCREMENT: i32 = CARD_HEIGHT / 4;
 
 pub struct Cascade {
     pos: Vector2<i32>,
     cards: Vec<Card>,
     tileset: Arc<Mutex<TileSet<Option<Card>>>>,
-    follow_cursor: bool,
 }
 
 impl Cascade {
@@ -21,13 +18,11 @@ impl Cascade {
         pos: Vector2<i32>,
         cards: Vec<Card>,
         tileset: Arc<Mutex<TileSet<Option<Card>>>>,
-        follow_cursor: bool,
     ) -> Self {
         Self {
             pos,
             cards,
             tileset,
-            follow_cursor,
         }
     }
 
@@ -38,21 +33,12 @@ impl Cascade {
             self.cards.split_off(self.cards.len() - n)
         }
     }
-    pub fn take_all(&mut self) -> Vec<Card> {
-        let mut v = Vec::new();
-        std::mem::swap(&mut v, &mut self.cards);
-        v
-    }
     pub fn put(&mut self, mut cards: Vec<Card>) {
         self.cards.append(&mut cards);
     }
 
     pub fn is_empty(&self) -> bool {
         self.cards.is_empty()
-    }
-
-    pub fn is_single_card(&self) -> bool {
-        self.cards.len() == 1
     }
 
     pub fn cards_to_take(&self, pos: Vector2<i32>) -> usize {
@@ -82,9 +68,6 @@ impl Cascade {
         }
         true
     }
-    pub fn top_card(&self) -> Option<&Card> {
-        self.cards.first()
-    }
     pub fn bottom_card(&self) -> Option<&Card> {
         self.cards.last()
     }
@@ -98,18 +81,11 @@ impl Cascade {
 }
 
 impl EventHandler<ggez::GameError> for Cascade {
-    fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        if self.follow_cursor {
-            let cursor_pos = input::mouse::position(ctx);
-            self.pos = vector![
-                cursor_pos.x as i32 - CARD_WIDTH / 2,
-                cursor_pos.y as i32 - CARD_HEIGHT / 3
-            ];
-        }
+    fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
         Ok(())
     }
     fn draw(&mut self, _ctx: &mut Context) -> GameResult<()> {
-        if self.is_empty() && !self.follow_cursor {
+        if self.is_empty() {
             self.tileset
                 .lock()
                 .unwrap()
