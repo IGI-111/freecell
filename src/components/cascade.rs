@@ -74,7 +74,7 @@ impl Cascade {
         } else {
             return true;
         };
-        while let Some(current_card) = it.next() {
+        for current_card in it {
             if !(prev_card.follows_alternating(current_card)) {
                 return false;
             }

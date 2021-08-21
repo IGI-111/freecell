@@ -56,7 +56,7 @@ impl EventHandler<ggez::GameError> for Finale {
             self.tileset
                 .lock()
                 .unwrap()
-                .queue_tile(Some(card.clone()), pos.clone(), None::<TileParams>)
+                .queue_tile(Some(card.clone()), *pos, None::<TileParams>)
                 .unwrap();
         }
         Ok(())

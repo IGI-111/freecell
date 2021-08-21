@@ -94,7 +94,7 @@ impl Game {
         ]
     }
     fn init_cursor_column(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> Cascade {
-        Cascade::new(vector![0, 0], vec![], tileset.clone(), true)
+        Cascade::new(vector![0, 0], vec![], tileset, true)
     }
     fn init_open_cells(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Cell; 4] {
         [
@@ -128,25 +128,19 @@ impl Game {
                     MARGIN_LENGTH
                 ],
                 None,
-                tileset.clone(),
+                tileset,
             ),
         ]
     }
     fn init_foundations(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Foundation; 4] {
         [
             Foundation::new(
-                vector![
-                    MARGIN_LENGTH + (0 * (CARD_WIDTH + MARGIN_LENGTH)),
-                    MARGIN_LENGTH
-                ],
+                vector![MARGIN_LENGTH, MARGIN_LENGTH],
                 vec![],
                 tileset.clone(),
             ),
             Foundation::new(
-                vector![
-                    MARGIN_LENGTH + (1 * (CARD_WIDTH + MARGIN_LENGTH)),
-                    MARGIN_LENGTH
-                ],
+                vector![MARGIN_LENGTH + (CARD_WIDTH + MARGIN_LENGTH), MARGIN_LENGTH],
                 vec![],
                 tileset.clone(),
             ),
@@ -164,7 +158,7 @@ impl Game {
                     MARGIN_LENGTH
                 ],
                 vec![],
-                tileset.clone(),
+                tileset,
             ),
         ]
     }

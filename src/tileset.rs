@@ -77,7 +77,7 @@ impl<Key: Hash + Eq> TileSet<Key> {
                 normal_y,
             ))
             .color(options.color.unwrap_or(Color::WHITE))
-            .scale(options.scale.unwrap_or(vector![1.0, 1.0]));
+            .scale(options.scale.unwrap_or_else(|| vector![1.0, 1.0]));
 
         self.spritebatch.add(d);
 

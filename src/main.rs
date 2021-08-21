@@ -27,7 +27,7 @@ fn main() {
         .add_resource_path(resource_dir)
         .build()
         .unwrap();
-    graphics::set_window_title(&mut ctx, "Freecell");
+    graphics::set_window_title(&ctx, "Freecell");
     let game = Game::new(&mut ctx);
     event::run(ctx, event_loop, game);
 }
