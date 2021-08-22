@@ -3,7 +3,7 @@
 Yet another implementation of the legendary total information solitaire.
 Play patience like it's 1991, complete with sights and sounds.
 
-![game](https://user-images.githubusercontent.com/7190144/129993476-3d4cf9d7-48d2-4431-af0b-c1de309489ca.gif)
+![game](https://user-images.githubusercontent.com/7190144/130370493-4763e2f1-5e6e-4dd0-9e61-888e4203fb5d.gif)
 
 ## Build
 
