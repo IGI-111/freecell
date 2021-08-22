@@ -30,13 +30,13 @@ impl Hand {
     }
     fn play_drop(&self, ctx: &mut Context) {
         let mut source = Source::from_data(ctx, self.drop_audio.clone()).unwrap();
-        source.set_volume(0.1);
+        source.set_volume(0.15);
         source.set_pitch(1.7);
         source.play_detached(ctx).unwrap();
     }
     fn play_take(&self, ctx: &mut Context) {
         let mut source = Source::from_data(ctx, self.take_audio.clone()).unwrap();
-        source.set_volume(0.1);
+        source.set_volume(0.15);
         source.set_pitch(1.7);
         source.play_detached(ctx).unwrap();
     }

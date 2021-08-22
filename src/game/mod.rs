@@ -1,16 +1,15 @@
-use crate::card::{Card, CARD_HEIGHT, CARD_WIDTH};
-use crate::components::{Cascade, Cell, Finale, Foundation, Hand};
+use crate::card::Card;
+use crate::components::{Button, Cascade, Cell, Finale, Foundation, Hand};
 use crate::tileset::TileSet;
 use ggez::audio::{SoundData, SoundSource, Source};
 use ggez::event::EventHandler;
 use ggez::graphics::{self, Color};
 use ggez::input::mouse::MouseButton;
 use ggez::{Context, GameResult};
-use nalgebra::{point, vector, Vector2};
-use rand::prelude::*;
+use nalgebra::{vector, Vector2};
 use std::sync::{Arc, Mutex};
 
-const MARGIN_LENGTH: i32 = 20;
+mod init;
 
 pub trait Collision {
     fn inside(&self, pos: Vector2<i32>) -> bool;
@@ -28,165 +27,61 @@ pub struct Game {
     open_cells: [Cell; 4],
     foundations: [Foundation; 4],
     hand: Hand,
-    cursor_card_source: Option<CardSource>,
+    hand_card_source: Option<CardSource>,
+    button: Button,
     finale: Finale,
     deal_audio: SoundData,
 }
 
 impl Game {
-    fn init_tileset(ctx: &mut Context) -> TileSet<Option<Card>> {
-        let image = graphics::Image::new(ctx, "/cards.png").unwrap();
-        let mut tileset = TileSet::new(image, vector![CARD_WIDTH, CARD_HEIGHT]);
-        for suit in 0..4 {
-            for value in 0..13 {
-                tileset
-                    .register_tile(
-                        Some(Card { suit, value }),
-                        point![value as i32, suit as i32],
-                    )
-                    .unwrap();
-            }
-        }
-        tileset.register_tile(None, point![12, 4]).unwrap();
-        tileset
-    }
-
-    fn init_cascades(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Cascade; 8] {
-        let mut rng = rand::thread_rng();
-        let mut deck = Card::deck();
-        deck.shuffle(&mut rng);
-
-        let mut cascades = vec![
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-        ];
-        let mut selected_column = 0;
-        while let Some(card) = deck.pop() {
-            cascades[selected_column].push(card);
-            selected_column = (selected_column + 1) % cascades.len();
-        }
-        let mut it = cascades.into_iter().enumerate().map(|(i, cards)| {
-            Cascade::new(
-                vector![
-                    2 * MARGIN_LENGTH + (i as i32 * (CARD_WIDTH + MARGIN_LENGTH)),
-                    MARGIN_LENGTH + CARD_HEIGHT + MARGIN_LENGTH
-                ],
-                cards,
-                tileset.clone(),
-            )
-        });
-        [
-            it.next().unwrap(),
-            it.next().unwrap(),
-            it.next().unwrap(),
-            it.next().unwrap(),
-            it.next().unwrap(),
-            it.next().unwrap(),
-            it.next().unwrap(),
-            it.next().unwrap(),
-        ]
-    }
-    fn init_open_cells(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Cell; 4] {
-        [
-            Cell::new(
-                vector![
-                    3 * MARGIN_LENGTH + (4 * (CARD_WIDTH + MARGIN_LENGTH)),
-                    MARGIN_LENGTH
-                ],
-                None,
-                tileset.clone(),
-            ),
-            Cell::new(
-                vector![
-                    3 * MARGIN_LENGTH + (5 * (CARD_WIDTH + MARGIN_LENGTH)),
-                    MARGIN_LENGTH
-                ],
-                None,
-                tileset.clone(),
-            ),
-            Cell::new(
-                vector![
-                    3 * MARGIN_LENGTH + (6 * (CARD_WIDTH + MARGIN_LENGTH)),
-                    MARGIN_LENGTH
-                ],
-                None,
-                tileset.clone(),
-            ),
-            Cell::new(
-                vector![
-                    3 * MARGIN_LENGTH + (7 * (CARD_WIDTH + MARGIN_LENGTH)),
-                    MARGIN_LENGTH
-                ],
-                None,
-                tileset,
-            ),
-        ]
-    }
-    fn init_foundations(tileset: Arc<Mutex<TileSet<Option<Card>>>>) -> [Foundation; 4] {
-        [
-            Foundation::new(
-                vector![MARGIN_LENGTH, MARGIN_LENGTH],
-                vec![],
-                tileset.clone(),
-            ),
-            Foundation::new(
-                vector![MARGIN_LENGTH + (CARD_WIDTH + MARGIN_LENGTH), MARGIN_LENGTH],
-                vec![],
-                tileset.clone(),
-            ),
-            Foundation::new(
-                vector![
-                    MARGIN_LENGTH + (2 * (CARD_WIDTH + MARGIN_LENGTH)),
-                    MARGIN_LENGTH
-                ],
-                vec![],
-                tileset.clone(),
-            ),
-            Foundation::new(
-                vector![
-                    MARGIN_LENGTH + (3 * (CARD_WIDTH + MARGIN_LENGTH)),
-                    MARGIN_LENGTH
-                ],
-                vec![],
-                tileset,
-            ),
-        ]
-    }
-
     fn is_victory(&self) -> bool {
         self.foundations.iter().all(|f| f.is_full())
     }
 
     pub fn new(ctx: &mut Context) -> Self {
-        let tileset = Arc::new(Mutex::new(Self::init_tileset(ctx)));
-        let cascades = Self::init_cascades(tileset.clone());
-        let open_cells = Self::init_open_cells(tileset.clone());
-        let foundations = Self::init_foundations(tileset.clone());
+        let tileset = Arc::new(Mutex::new(init::tileset(ctx)));
+        let cascades = init::cascades(tileset.clone());
+        let open_cells = init::open_cells(tileset.clone());
+        let foundations = init::foundations(tileset.clone());
         let hand = Hand::new(ctx, tileset.clone());
         let deal_audio = SoundData::new(ctx, "/deal.wav").unwrap();
+        let button = init::button(ctx);
 
-        Self {
+        let game = Self {
             cascades,
             open_cells,
             foundations,
             hand,
-            cursor_card_source: None,
+            hand_card_source: None,
             finale: Finale::new(ctx, tileset.clone()),
             tileset,
             deal_audio,
-        }
+            button,
+        };
+        game.play_deal(ctx);
+        game
+    }
+
+    fn play_send(&self, ctx: &mut Context) {
+        let mut source = Source::from_data(ctx, self.deal_audio.clone()).unwrap();
+        source.set_volume(0.2);
+        source.play_detached(ctx).unwrap();
     }
 
     fn play_deal(&self, ctx: &mut Context) {
         let mut source = Source::from_data(ctx, self.deal_audio.clone()).unwrap();
-        source.set_volume(0.1);
+        source.set_volume(2.);
+        source.set_pitch(2.);
         source.play_detached(ctx).unwrap();
+    }
+
+    fn reset(&mut self, ctx: &mut Context) {
+        self.play_deal(ctx);
+        self.cascades = init::cascades(self.tileset.clone());
+        self.open_cells = init::open_cells(self.tileset.clone());
+        self.foundations = init::foundations(self.tileset.clone());
+        self.hand = Hand::new(ctx, self.tileset.clone());
+        self.finale = Finale::new(ctx, self.tileset.clone());
     }
 }
 
@@ -197,6 +92,12 @@ impl EventHandler<ggez::GameError> for Game {
         }
         if button == MouseButton::Left {
             let pos = vector![x as i32, y as i32];
+
+            if self.button.inside(pos) {
+                self.reset(ctx);
+                return;
+            }
+
             if !self.hand.is_empty() {
                 for c in self.cascades.iter_mut() {
                     if c.inside(pos) && c.can_stack(self.hand.top_card().unwrap()) {
@@ -221,7 +122,7 @@ impl EventHandler<ggez::GameError> for Game {
                     }
                 }
                 // return cards back if they're not put anywhere
-                match self.cursor_card_source {
+                match self.hand_card_source {
                     Some(CardSource::Cell(n)) => {
                         self.open_cells[n].put(self.hand.take(ctx).pop().unwrap());
                     }
@@ -235,13 +136,16 @@ impl EventHandler<ggez::GameError> for Game {
                         panic!("No card source");
                     }
                 }
-                self.cursor_card_source = None;
+                self.hand_card_source = None;
             }
         }
     }
 
     fn mouse_button_down_event(&mut self, ctx: &mut Context, button: MouseButton, x: f32, y: f32) {
         if self.is_victory() {
+            if self.finale.is_playing() {
+                self.reset(ctx);
+            }
             return;
         }
         match button {
@@ -253,8 +157,8 @@ impl EventHandler<ggez::GameError> for Game {
                             for f in self.foundations.iter_mut() {
                                 if f.can_stack(card_to_stack) {
                                     f.put(c.take(1).pop().unwrap());
-                                    self.cursor_card_source = None;
-                                    self.play_deal(ctx);
+                                    self.hand_card_source = None;
+                                    self.play_send(ctx);
                                     return;
                                 }
                             }
@@ -267,8 +171,8 @@ impl EventHandler<ggez::GameError> for Game {
                             for f in self.foundations.iter_mut() {
                                 if f.can_stack(card_to_stack) {
                                     f.put(c.take().unwrap());
-                                    self.cursor_card_source = None;
-                                    self.play_deal(ctx);
+                                    self.hand_card_source = None;
+                                    self.play_send(ctx);
                                     return;
                                 }
                             }
@@ -284,7 +188,7 @@ impl EventHandler<ggez::GameError> for Game {
                             let cards_to_take = c.cards_to_take(pos);
                             if c.has_alternating_color_cards(cards_to_take) {
                                 self.hand.put(ctx, c.take(cards_to_take));
-                                self.cursor_card_source = Some(CardSource::Cascade(i));
+                                self.hand_card_source = Some(CardSource::Cascade(i));
                                 return;
                             }
                         }
@@ -293,7 +197,7 @@ impl EventHandler<ggez::GameError> for Game {
                         if c.inside(pos) {
                             if let Some(card) = c.take() {
                                 self.hand.put(ctx, vec![card]);
-                                self.cursor_card_source = Some(CardSource::Cell(i));
+                                self.hand_card_source = Some(CardSource::Cell(i));
                                 return;
                             }
                         }
@@ -302,7 +206,7 @@ impl EventHandler<ggez::GameError> for Game {
                         if f.inside(pos) {
                             if let Some(card) = f.take() {
                                 self.hand.put(ctx, vec![card]);
-                                self.cursor_card_source = Some(CardSource::Foundation(i));
+                                self.hand_card_source = Some(CardSource::Foundation(i));
                                 return;
                             }
                         }
@@ -336,6 +240,7 @@ impl EventHandler<ggez::GameError> for Game {
             c.draw(ctx)?;
         }
         self.hand.draw(ctx)?;
+        self.button.draw(ctx)?;
 
         if self.is_victory() {
             self.finale.draw(ctx)?;

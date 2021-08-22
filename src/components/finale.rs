@@ -29,6 +29,9 @@ impl Finale {
             audio,
         }
     }
+    pub fn is_playing(&self) -> bool {
+        self.audio.playing()
+    }
 }
 
 impl EventHandler<ggez::GameError> for Finale {
@@ -43,7 +46,7 @@ impl EventHandler<ggez::GameError> for Finale {
                 vector![rng.gen_range(-10..810), rng.gen_range(-10..610)],
             ));
 
-            if !self.audio.playing() {
+            if !self.is_playing() {
                 self.audio.play(ctx)?;
             } else {
                 self.audio.set_volume(self.audio.volume() * 0.99);
