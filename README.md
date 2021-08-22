@@ -25,4 +25,5 @@ The goal of the game is to move the four aces, as they appear, to the foundation
 
 Only the top card or tableau of each cascade is available for play. It may be moved to a foundation pile, a free cell, or to another tableau pile. Within the tableau, cards are built down in sequence and alternating in color. Any card may be moved into an empty space. Blocks of cards may not be moved, unless the requisite number of free cells and/or tableau spaces are availabe to allow each individual card to be moved. If you fill all four foundation piles, you win.
 
+Press the top button to deal a new game.
 Move cards or tableaux with drag and drop, right click cards to send them directly to the foundations.
