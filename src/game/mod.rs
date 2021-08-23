@@ -92,12 +92,6 @@ impl EventHandler<ggez::GameError> for Game {
         }
         if button == MouseButton::Left {
             let pos = vector![x as i32, y as i32];
-
-            if self.button.inside(pos) {
-                self.reset(ctx);
-                return;
-            }
-
             if !self.hand.is_empty() {
                 for c in self.cascades.iter_mut() {
                     if c.inside(pos) && c.can_stack(self.hand.top_card().unwrap()) {
@@ -182,6 +176,12 @@ impl EventHandler<ggez::GameError> for Game {
             }
             MouseButton::Left => {
                 let pos = vector![x as i32, y as i32];
+
+                if self.button.inside(pos) {
+                    self.reset(ctx);
+                    return;
+                }
+
                 if self.hand.is_empty() {
                     for (i, c) in self.cascades.iter_mut().enumerate() {
                         if c.inside(pos) {
