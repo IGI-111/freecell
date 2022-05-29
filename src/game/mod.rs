@@ -38,6 +38,14 @@ impl Game {
         self.foundations.iter().all(|f| f.is_full())
     }
 
+    fn empty_cell_count(&self) -> usize {
+        self.open_cells.iter().filter(|c| c.is_empty()).count()
+    }
+
+    fn empty_cascade_count(&self) -> usize {
+        self.cascades.iter().filter(|c| c.is_empty()).count()
+    }
+
     pub fn new(ctx: &mut Context) -> Self {
         let tileset = Arc::new(Mutex::new(init::tileset(ctx)));
         let cascades = init::cascades(tileset.clone());
@@ -183,10 +191,14 @@ impl EventHandler<ggez::GameError> for Game {
                 }
 
                 if self.hand.is_empty() {
+                    let movable_cards = 2usize.pow(self.empty_cascade_count() as u32)
+                        * (self.empty_cell_count() + 1);
                     for (i, c) in self.cascades.iter_mut().enumerate() {
                         if c.inside(pos) {
                             let cards_to_take = c.cards_to_take(pos);
-                            if c.has_alternating_color_cards(cards_to_take) {
+                            if cards_to_take <= movable_cards
+                                && c.has_alternating_color_cards(cards_to_take)
+                            {
                                 self.hand.put(ctx, c.take(cards_to_take));
                                 self.hand_card_source = Some(CardSource::Cascade(i));
                                 return;
