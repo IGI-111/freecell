@@ -13,11 +13,13 @@ This game uses ggez so on Linux you'll want to install `libasound2`, `libudev` a
 apt install libasound2-dev libudev-dev pkg-config
 ```
 
-and then you should be able to simply:
+then you should be able to simply:
 
 ```
 cargo run
 ```
+
+There also is a nix flake available.
 
 ## Play
 
