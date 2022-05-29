@@ -15,6 +15,7 @@ pub trait Collision {
     fn inside(&self, pos: Vector2<i32>) -> bool;
 }
 
+#[derive(PartialEq)]
 enum CardSource {
     Cell(usize),
     Cascade(usize),
@@ -35,7 +36,7 @@ pub struct Game {
 
 impl Game {
     fn is_victory(&self) -> bool {
-        self.foundations.iter().all(|f| f.is_full())
+        (self.hand_card_source == None) && (self.cascades.iter().all(|c| c.has_all_alternating()))
     }
 
     fn empty_cell_count(&self) -> usize {

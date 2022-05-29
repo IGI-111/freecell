@@ -68,6 +68,9 @@ impl Cascade {
         }
         true
     }
+    pub fn has_all_alternating(&self) -> bool {
+        self.has_alternating_color_cards(self.cards.len())
+    }
     pub fn bottom_card(&self) -> Option<&Card> {
         self.cards.last()
     }
